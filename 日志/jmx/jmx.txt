@@ -1,8 +1,9 @@
 1.jmx是什么？
+IT资源监控与管理框架
 https://www.cnblogs.com/chengJAVA/p/3306527.html
 
 2.jmx 概览
 https://blog.csdn.net/youyou1543724847/article/details/82933076
 
 3.jmx应用
-tomcat:org.apache.tomcat.util.modeler.Registry
+tomcat:	org.apache.tomcat.util.modeler.Registry
