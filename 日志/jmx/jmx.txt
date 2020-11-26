@@ -7,3 +7,6 @@ https://blog.csdn.net/youyou1543724847/article/details/82933076
 
 3.jmx应用
 tomcat:	org.apache.tomcat.util.modeler.Registry
+
+4.实际操作
+http://www.360doc.com/content/11/1101/21/8001918_160917930.shtml
