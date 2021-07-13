@@ -1,4 +1,3 @@
-package recommend.algoframe.recaller;
 
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -7,7 +6,8 @@ import org.slf4j.LoggerFactory;
 import java.util.function.Predicate;
 
 /**
- * 逻辑解析
+ * 逻辑解析器，可以解析 && || ！ 等逻辑，单元逻辑支持自定义
+ * 单元逻辑: 最基本的逻辑判断，返回true 或 false
  */
 public class LogicParser {
 
@@ -129,97 +129,91 @@ public class LogicParser {
         }
     }
 
-    /**
-     * 逻辑解析器，可以解析 && || ！ 等逻辑，单元逻辑支持自定义
-     * 单元逻辑: 最基本的逻辑判断，返回true 或 false
-     */
-    public static class Parser {
 
-        public Logic parse(String originStr, Predicate<String> predicate) {
-            Logic currenLogic = new Logic(predicate);
-            this.parse(currenLogic, originStr.toCharArray(), 0);
-            return currenLogic;
-        }
+    public Logic parse(String originStr, Predicate<String> predicate) {
+        Logic currenLogic = new Logic(predicate);
+        this.parse(currenLogic, originStr.toCharArray(), 0);
+        return currenLogic;
+    }
 
-        public void parse(Logic currenLogic, char[] chars, int start) {
-            int i = start;
-            StringBuilder sb = new StringBuilder();
-            for (; i < chars.length; i++) {
+    public void parse(Logic currenLogic, char[] chars, int start) {
+        int i = start;
+        StringBuilder sb = new StringBuilder();
+        for (; i < chars.length; i++) {
+            if (currenLogic.parent != null && currenLogic.parent.relateChild == Relation.NEGATE) {
+                // 跟父的关系是! 遇到空格 && || 要结束
+                if (isNegateStop(chars[i])) {
+                    currenLogic.end = i - 1;
+                    currenLogic.current = sb.toString();
+                    return;
+                }
+            }
+            if (isEndBracketsRelation(chars[i])) {
+                // 遇到右括号） 结束(开始的子逻辑
+                currenLogic.end = i;
+                currenLogic.current = sb.toString();
+                return;
+            }
+            if (Character.isWhitespace(chars[i])) {
+                continue;
+            } else if (isStartRelation(chars[i])) {
+                // 开始子逻辑 包括 ! (
+                currenLogic.relateChild = chars[i] == '!' ? Relation.NEGATE : Relation.BRACKETS;
+                currenLogic.childLogic = new Logic(currenLogic.predicate);
+                currenLogic.childLogic.parent = currenLogic;
+                parse(currenLogic.childLogic, chars, i + 1);
+                // 获取子逻辑的边界
+                currenLogic.end = currenLogic.childLogic.getBroEnd();
+                i = currenLogic.end;
+
                 if (currenLogic.parent != null && currenLogic.parent.relateChild == Relation.NEGATE) {
-                    // 跟父的关系是! 遇到空格 && || 要结束
-                    if (isNegateStop(chars[i])) {
-                        currenLogic.end = i - 1;
+                    // 跟父的关系是! 遇到)也要结束
+                    if (isEndBracketsRelation(chars[i])) {
+                        currenLogic.end = i;
                         currenLogic.current = sb.toString();
                         return;
                     }
                 }
-                if (isEndBracketsRelation(chars[i])) {
-                    // 遇到右括号） 结束(开始的子逻辑
-                    currenLogic.end = i;
-                    currenLogic.current = sb.toString();
+
+            } else if (isBroRelation(chars[i])) {
+                // 开始兄弟逻辑，兄弟逻辑的边界就是)，遇到右括号结束兄弟逻辑
+                currenLogic.relateBro = chars[i] == '&' ? Relation.AND : Relation.OR;
+                currenLogic.current = sb.toString();
+                currenLogic.broLogic = new Logic(currenLogic.predicate);
+                currenLogic.broLogic.preBro = currenLogic;
+                parse(currenLogic.broLogic, chars, i + 2);
+                currenLogic.end = currenLogic.getBroEnd();
+                i = currenLogic.end;
+                // 右括号结束兄弟逻辑
+                if (isEndBracketsRelation(chars[currenLogic.end])) {
                     return;
                 }
-                if (Character.isWhitespace(chars[i])) {
-                    continue;
-                } else if (isStartRelation(chars[i])) {
-                    // 开始子逻辑 包括 ! (
-                    currenLogic.relateChild = chars[i] == '!' ? Relation.NEGATE : Relation.BRACKETS;
-                    currenLogic.childLogic = new Logic(currenLogic.predicate);
-                    currenLogic.childLogic.parent = currenLogic;
-                    parse(currenLogic.childLogic, chars, i + 1);
-                    // 获取子逻辑的边界
-                    currenLogic.end = currenLogic.childLogic.getBroEnd();
-                    i = currenLogic.end;
-
-                    if (currenLogic.parent != null && currenLogic.parent.relateChild == Relation.NEGATE) {
-                        // 跟父的关系是! 遇到)也要结束
-                        if (isEndBracketsRelation(chars[i])) {
-                            currenLogic.end = i;
-                            currenLogic.current = sb.toString();
-                            return;
-                        }
-                    }
-
-                } else if (isBroRelation(chars[i])) {
-                    // 开始兄弟逻辑，兄弟逻辑的边界就是)，遇到右括号结束兄弟逻辑
-                    currenLogic.relateBro = chars[i] == '&' ? Relation.AND : Relation.OR;
-                    currenLogic.current = sb.toString();
-                    currenLogic.broLogic = new Logic(currenLogic.predicate);
-                    currenLogic.broLogic.preBro = currenLogic;
-                    parse(currenLogic.broLogic, chars, i + 2);
-                    currenLogic.end = currenLogic.getBroEnd();
-                    i = currenLogic.end;
-                    // 右括号结束兄弟逻辑
-                    if (isEndBracketsRelation(chars[currenLogic.end])) {
-                        return;
-                    }
-                } else {
-                    sb.append(chars[i]);
-                }
+            } else {
+                sb.append(chars[i]);
             }
-            currenLogic.current = sb.toString();
-            currenLogic.end = i - 1;
         }
+        currenLogic.current = sb.toString();
+        currenLogic.end = i - 1;
+    }
 
-        private boolean isStartRelation(char chr) {
-            return chr == '(' || chr == '!';
-        }
+    private boolean isStartRelation(char chr) {
+        return chr == '(' || chr == '!';
+    }
 
-        private boolean isBroRelation(char chr) {
-            return chr == '|' || chr == '&';
-        }
+    private boolean isBroRelation(char chr) {
+        return chr == '|' || chr == '&';
+    }
 
-        private boolean isEndBracketsRelation(char chr) {
-            return chr == ')';
-        }
+    private boolean isEndBracketsRelation(char chr) {
+        return chr == ')';
+    }
 
-        private boolean isNegateStop(char chr) {
-            return Character.isWhitespace(chr) || chr == '&' || chr == '|' || chr == ')';
-        }
+    private boolean isNegateStop(char chr) {
+        return Character.isWhitespace(chr) || chr == '&' || chr == '|' || chr == ')';
     }
 
     public static void test(String str, boolean except) {
-        Parser parser = new Parser();
+        LogicParser parser = new LogicParser();
         // Logic parse = parser.parse(str, s -> versionCompare("1.11.1", "1.10.1") > 0);
         Logic parse = parser.parse(str, s -> "AllTrue".equals(s));
         String buildStr = parse.buildStr();
