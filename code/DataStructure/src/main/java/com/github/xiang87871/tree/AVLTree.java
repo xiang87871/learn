@@ -1,7 +1,6 @@
 package com.github.xiang87871.tree;
 
 import lombok.Data;
-import org.omg.CORBA.PUBLIC_MEMBER;
 
 /**
  * @author ：laizhixiang
@@ -92,17 +91,10 @@ public class AVLTree {
      * 平衡状态
      *
      * @param node
-     * @return 0: 平衡，-1：左长，1：右长
+     * @return 平衡：>=-1 && <=1 左长：<-1，右长：>1
      */
-    public int blanceStatus(Node node) {
-        int blance = (node.right == null ? 0 : node.right.height) - (node.left == null ? 0 : node.left.height);
-        if (blance > 1) {
-            return 1;
-        } else if (blance >= -1) {
-            return 0;
-        } else {
-            return -1;
-        }
+    public int blance(Node node) {
+        return (node.right == null ? 0 : node.right.height) - (node.left == null ? 0 : node.left.height);
     }
 
     public void print() {
@@ -139,33 +131,21 @@ public class AVLTree {
             node.right = insert(node.right, data);
             computeNodeHeight(node);
         }
-        int i = blanceStatus(node);
-        if (i == -1) {
+        int i = blance(node);
+        if (i < -1) {
             // 左高
-            if(node.left.data < data) {
+            if(blance(node.left) > 0) {
+                // <类型 先左子节点左转
                 node.left = leftRotate(node.left);
             }
             node = rightRotate(node);
-//            if (node.left.right != null) {
-//                //左括号( 类型，先转成/型
-//                node.left = leftRotate(node.left);
-//                node = rightRotate(node);
-//            } else if (node.left.left != null) {
-//                // /型
-//                node = rightRotate(node);
-//            }
-        } else if (i == 1) {
+        } else if (i > 1) {
             // 右高
-            if(node.right.data > data) {
+            if(blance(node.right) < 0) {
+                // >类型 先右子节点右转
                 node.right = rightRotate(node.right);
             }
             node = leftRotate(node);
-//            if (node.right.left != null) {
-//                node.right = rightRotate(node.right);
-//                node = leftRotate(node);
-//            } else if (node.right.right != null) {
-//                node = leftRotate(node);
-//            }
         }
         return node;
     }
@@ -211,8 +191,8 @@ public class AVLTree {
 
     public static void main(String[] args) {
         AVLTree avlTree = new AVLTree();
-        int[] datas = new int[]{0,10,5,2,1,6,33};
-//        int[] datas = new int[]{0,1,2,5,6,10,33};
+//        int[] datas = new int[]{0,10,5,2,1,6,33};
+        int[] datas = new int[]{0,1,2,5,6,10,33};
 
         for (int data : datas) {
             avlTree.insert(data);
